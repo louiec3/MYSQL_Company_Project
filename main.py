@@ -28,6 +28,7 @@ def main():
     menu(connection)
     print("\nTerminating Database Manger... Goodbye.")
 
+
 def menu(connection):
     while True:
         print("\nEnter a value coresponding to the function of your choice")
@@ -43,8 +44,16 @@ def menu(connection):
         print("10. Add Department Location")
         print("11. Remove Department Location")
         
-        func_select = int((input("\nEnter your choice (1-11): ").strip()))
-
+        while True:
+            try:
+                func_select = int(input("\nEnter your choice (0-11): ").strip())
+                if 0 <= func_select <= 11:
+                    break
+                else:
+                    print("Invalid input: enter a number between 0 and 11.")
+            except ValueError:
+                print("Invalid input: enter a number between 0 and 11.")
+                
         match func_select:
             case 1:
                 add_employee(connection)
