@@ -1,9 +1,36 @@
+import mysql.connector
+
+DATABASE_NAME = "Company"
+USER_NAME = "root"
+HOST_NAME = "localhost"
+PASSWORD = ""
+
+
+def connect_to_db():
+    try:
+        mydb = mysql.connector.connect(
+        host=HOST_NAME,
+        user=USER_NAME,
+        password=PASSWORD,
+        database=DATABASE_NAME
+        )
+    except Exception as e:
+        print(e)
+        return
+
+    print(f"Now managing: {mydb.database}")
+    return mydb
+
+
 def main():
     print("Database Manager booting up...")
-    print("Now managing (DATABASE_NAME)")
+    connection = connect_to_db()
+    menu(connection)
+    print("\nTerminating Database Manger... Goodbye.")
 
+def menu(connection):
     while True:
-        print("Enter a value coresponding to the function of your choice")
+        print("\nEnter a value coresponding to the function of your choice")
         print("1. Add Employee")
         print("2. View Employee")
         print("3. Modify Employee")
@@ -20,53 +47,51 @@ def main():
 
         match func_select:
             case 1:
-                add_employee()
+                add_employee(connection)
             case 2:
-                view_employee()
+                view_employee(connection)
             case 3:
-                modify_employee()
+                modify_employee(connection)
             case 4:
-                remove_employee()
+                remove_employee(connection)
             case 5:
-                add_dependent()
+                add_dependent(connection)
             case 6:
-                remove_dependent()
+                remove_dependent(connection)
             case 7:
-                add_department()
+                add_department(connection)
             case 8:
-                view_department()
+                view_department(connection)
             case 9:
-                remove_department()
+                remove_department(connection)
             case 10:
-                add_department_location()
+                add_department_location(connection)
             case 11:
-                remove_department_location()
+                remove_department_location(connection)
             case 0:
-                print("\nTerminating Database Manger... Goodbye.")
                 return
 
     
-
-def add_employee():
+def add_employee(connection):
     # create new employee entry with proper data constraints
     # check if_exsists, ensure data format is proper, and there are no referential constraints
     # add error messages
     pass
 
-def view_employee():
+def view_employee(connection):
     # ask for mySSN
     # print all attributes of employee table
     # show supervisor name, department name and dependents
     pass
 
-def modify_employee():
+def modify_employee(connection):
     # ask for SSN
     # LOCK RECORD (***HOW?)
     # Display employee info (view_employee)
     # Allow user toupdate one or more of the following fields (address, sex, salary, super_ssn, Dno)
     pass
 
-def remove_employee():
+def remove_employee(connection):
     # ask for SSN
     # LOCK EMPLOYEE RECORD
     # Display employee info (view_employee)
@@ -75,7 +100,7 @@ def remove_employee():
     # if error, show warning message then ask to remove dependencies first
     pass
 
-def add_dependent():
+def add_dependent(connection):
     # ask for employee SSN
     # LOCK EMPLOYEE RECORD
     # show all dependents
@@ -83,7 +108,7 @@ def add_dependent():
     # create ne wdependent record
     pass
 
-def remove_dependent():
+def remove_dependent(connection):
     # ask for employee SSN
     # LOCK EMPLOYEE RECORD
     # show all dependents
@@ -91,18 +116,18 @@ def remove_dependent():
     # remove dependent 
     pass
 
-def add_department():
+def add_department(connection):
     # ask for new department name and information
     # add new record
     # display error for constraint violations
     pass
 
-def view_department():
+def view_department(connection):
     # ask for Dnumber
     # show list of departments, manager names, and all department locations
     pass
 
-def remove_department():
+def remove_department(connection):
     # ask for Dnumber
     # LOCK DEPARTMENT RECORD
     # show department information
@@ -111,7 +136,7 @@ def remove_department():
     # print errors and ask them to remove dependencies
     pass
 
-def add_department_location():
+def add_department_location(connection):
     # ask for Dnumber
     # LOCK DEPARTMENT RECORD
     # show all locations
@@ -119,7 +144,7 @@ def add_department_location():
     # create new location record
     pass
 
-def remove_department_location():
+def remove_department_location(connection):
     # ask for Dnumber
     # LOCK DEPARTMENT RECORD
     # show all loctions
