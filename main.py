@@ -245,7 +245,7 @@ def modify_employee(connection):
             new_super_ssn = input("New Supervisor SSN (leave blank to keep current): ").strip() or row[8]
             new_dno = input("New Department Number (leave blank to keep current): ").strip() or row[9]
 
-            # check if supervisor exists (if not NULL)
+            # check if supervisor exists
             if new_super_ssn:
                 cursor.execute("SELECT * FROM employees WHERE Ssn = %s", (new_super_ssn,))
                 if not cursor.fetchone():
@@ -277,6 +277,7 @@ def modify_employee(connection):
 
 
 
+
 def remove_employee(connection):
     # ask for SSN
     # LOCK EMPLOYEE RECORD
@@ -284,7 +285,54 @@ def remove_employee(connection):
     # ask for confirmation to delete
     # if confirmed = y, delete
     # if error, show warning message then ask to remove dependencies first
-    pass
+
+    ssn = input("Enter SSN of employee to remove: ").strip()
+
+    try:
+        connection.start_transaction()
+        with connection.cursor() as cursor:
+            # LOCK EMPLOYEE RECORD
+            cursor.execute("SELECT * FROM employees WHERE Ssn = %s FOR UPDATE", (ssn,))
+            row = cursor.fetchone()
+
+            if not row:
+                print("Error: Employee not found.")
+                connection.rollback() # unlock
+                return
+
+            # Display employee info (view_employee)
+            print("\nEmployee Information:")
+            print(f"First Name     : {row[0]}")
+            print(f"Middle Initial : {row[1]}")
+            print(f"Last Name      : {row[2]}")
+            print(f"SSN            : {row[3]}")
+            print(f"Birthdate      : {row[4]}")
+            print(f"Address        : {row[5]}")
+            print(f"Sex            : {row[6]}")
+            print(f"Salary         : ${row[7]:,.2f}")
+            print(f"Supervisor SSN : {row[8]}")
+            print(f"Department No. : {row[9]}")
+
+            confirm = input("\nAre you sure you want to delete this employee? (y/n): ").strip().lower()
+            if confirm != 'y':
+                print("Cancelled.")
+                connection.rollback() # unlock
+                return
+
+            # deete employee record
+            try:
+                cursor.execute("DELETE FROM employees WHERE Ssn = %s", (ssn,))
+                connection.commit()
+                print("Employee successfully removed.")
+            except mysql.connector.Error as err:
+                print("Error occurred during deletion.")
+                print(f"Reason: {err}")
+                print("You may need to remove dependent records (e.g., dependents, works_on) first.")
+                connection.rollback() # unlock
+
+    except mysql.connector.Error as err:
+        print(f"MySQL Error: {err}")
+        connection.rollback() # unlock
 
 def add_dependent(connection):
     # ask for employee SSN
@@ -292,7 +340,56 @@ def add_dependent(connection):
     # show all dependents
     # ask for new dependent info
     # create ne wdependent record
-    pass
+
+    # ask for employee SSN
+    ssn = input("Enter the SSN of the employee to add a dependent for: ").strip()
+
+    try:
+        connection.start_transaction()
+        with connection.cursor() as cursor:
+            # LOCK EMPLOYEE RECORD
+            cursor.execute("SELECT * FROM employees WHERE Ssn = %s FOR UPDATE", (ssn,))
+            employee = cursor.fetchone()
+            if not employee:
+                print("Employee not found.")
+                connection.rollback() # unlock
+                return
+
+            # show all dependents
+            cursor.execute("SELECT Dependent_name FROM dependent WHERE Essn = %s", (ssn,))
+            dependents = cursor.fetchall()
+            print("\nCurrent Dependents:")
+            if not dependents:
+                print("None")
+            else:
+                dep_names = [dep[0] for dep in dependents]
+                print(", ".join(dep_names))
+
+            # ask for new dependent info
+            name = input("\nEnter new dependent's name: ").strip()
+            sex = input("Sex (M/F): ").strip().upper()
+            bdate = input("Birthdate (YYYY-MM-DD): ").strip()
+            relationship = input("Relationship: ").strip()
+
+            # check if dependent already exists
+            cursor.execute("SELECT * FROM dependent WHERE Essn = %s AND Dependent_name = %s", (ssn, name))
+            if cursor.fetchone():
+                print("A dependent with this name already exists for this employee.")
+                connection.rollback() # unlock
+                return
+
+            # create new dependent record
+            cursor.execute("""
+                INSERT INTO dependent (Essn, Dependent_name, Sex, Bdate, Relationship)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (ssn, name, sex, bdate, relationship))
+            connection.commit()
+            print("Dependent added successfully.")
+
+    except mysql.connector.Error as err:
+        print(f"MySQL Error: {err}")
+        connection.rollback() # unlock
+
 
 def remove_dependent(connection):
     # ask for employee SSN
