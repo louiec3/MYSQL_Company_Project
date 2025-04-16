@@ -130,7 +130,7 @@ def add_employee(connection):
 
             connection.commit()
 
-            print("\nEmployee added successfully!")
+            print("\nEmployee added successfully.")
 
             print("\nEmployee Information:")
             print(f"First Name     : {fname}")
@@ -208,23 +208,74 @@ def view_employee(connection):
 
 def modify_employee(connection):
     # ask for SSN
-    ssn = "123456789"
     try:
+        ssn = input("Enter SSN of employee to modify: ").strip()
+
         with connection.cursor() as cursor:
             # LOCK RECORD
-            cursor.execute("SELECT *OM employees WHERE ssn = %s", (ssn,))
+            cursor.execute("SELECT * FROM employees WHERE Ssn = %s FOR UPDATE", (ssn,))
+            row = cursor.fetchone()
+            if not row:
+                print("Employee not found.")
+                return
+
             # Display employee info (view_employee)
-            
-            # Allow user user to update one or more of the following fields (address, sex, salary, super_ssn, Dno)
-            
-            rows = cursor.fetchall()
-            for row in rows:
-                print(row)
+            print("\nCurrent Employee Information:")
+            print(f"First Name     : {row[0]}")
+            print(f"Middle Initial : {row[1]}")
+            print(f"Last Name      : {row[2]}")
+            print(f"SSN            : {row[3]}")
+            print(f"Birthdate      : {row[4]}")
+            print(f"Address        : {row[5]}")
+            print(f"Sex            : {row[6]}")
+            print(f"Salary         : ${row[7]:,.2f}")
+            print(f"Supervisor SSN : {row[8]}")
+            print(f"Department No. : {row[9]}")
+
+            # Allow user to update one or more of the following fields (address, sex, salary, super_ssn, Dno)
+            new_address = input("New Address (leave blank to keep current): ").strip() or row[5]
+            new_sex = input("New Sex (M/F) (leave blank to keep current): ").strip().upper() or row[6]
+            try:
+                new_salary_input = input("New Salary (leave blank to keep current): ").strip()
+                new_salary = float(new_salary_input) if new_salary_input else row[7]
+            except ValueError:
+                print("Invalid salary input.")
+                return
+
+            new_super_ssn = input("New Supervisor SSN (leave blank to keep current): ").strip() or row[8]
+            new_dno = input("New Department Number (leave blank to keep current): ").strip() or row[9]
+
+            # check if supervisor exists (if not NULL)
+            if new_super_ssn:
+                cursor.execute("SELECT * FROM employees WHERE Ssn = %s", (new_super_ssn,))
+                if not cursor.fetchone():
+                    print("Error: Supervisor SSN does not exist.")
+                    return
+
+            # check if department exists
+            cursor.execute("SELECT * FROM department WHERE Dnumber = %s", (new_dno,))
+            if not cursor.fetchone():
+                print("Error: Department number does not exist.")
+                return
+
+            # excute use update
+            cursor.execute("""
+                UPDATE employees
+                SET Address = %s,
+                    Sex = %s,
+                    Salary = %s,
+                    Super_ssn = %s,
+                    Dno = %s
+                WHERE Ssn = %s
+            """, (new_address, new_sex, new_salary, new_super_ssn, new_dno, ssn))
+
+            connection.commit()
+            print("\nEmployee record updated successfully")
 
     except mysql.connector.Error as err:
         print(f"Error: {err}")
 
-    pass
+
 
 def remove_employee(connection):
     # ask for SSN
