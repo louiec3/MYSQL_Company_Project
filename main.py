@@ -19,8 +19,6 @@ def connect_to_db():
         print(e)
         return
 
-
-
     print(f"Now managing: {mydb.database}")
     return mydb
 
@@ -125,8 +123,8 @@ def add_employee(connection):
 
             cursor.execute("""
                 INSERT INTO employees (Fname, Minit, Lname, Ssn, Bdate, Address, Sex, Salary, Super_ssn, Dno)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """, (fname, minit, lname, ssn, bdate, address, sex, salary, super_ssn, dno))
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""", 
+                (fname, minit, lname, ssn, bdate, address, sex, salary, super_ssn, dno))
 
             connection.commit()
 
@@ -169,8 +167,7 @@ def view_employee(connection):
                 FROM employees e
                 LEFT JOIN department d ON e.Dno = d.Dnumber
                 LEFT JOIN employees s ON e.Super_ssn = s.Ssn
-                WHERE e.Ssn = %s
-            """, (ssn,))
+                WHERE e.Ssn = %s""", (ssn,))
             row = cursor.fetchone()
 
             if not row:
@@ -396,7 +393,7 @@ def remove_dependent(connection):
     # LOCK EMPLOYEE RECORD
     # show all dependents
     # ask for name of dependent to remove
-    # remove dependent 
+    # remove dependent
 
     # ask for employee SSN
     ssn = input("Enter the SSN of the employee: ").strip()
@@ -440,7 +437,6 @@ def remove_dependent(connection):
     except mysql.connector.Error as err:
         print(f"MySQL Error: {err}")
         connection.rollback() # unlock
-
     pass
 
 def add_department(connection):
@@ -481,9 +477,48 @@ def add_department(connection):
 
 
 def view_department(connection):
-    # ask for Dnumber
-    # show list of departments, manager names, and all department locations
-    pass
+    # ask for department number
+    dept_number = input("Enter department number: ").strip()
+
+    try:
+        with connection.cursor() as cursor:
+            # Retrieve department and manager info
+            cursor.execute("""
+                SELECT 
+                    d.Dname,
+                    d.Dnumber,
+                    e.Fname,
+                    e.Minit,
+                    e.Lname
+                FROM department d
+                LEFT JOIN employees e ON d.Mgr_ssn = e.Ssn
+                WHERE d.Dnumber = %s
+            """, (dept_number,))
+            dept = cursor.fetchone()
+
+            if not dept:
+                print("Department not found.")
+                return
+
+            print("\nDepartment Information:")
+            print(f"Department Name : {dept[0]}")
+            print(f"Department No.  : {dept[1]}")
+            print(f"Manager         : {dept[2]} {dept[3]} {dept[4]}")
+
+            # Retrieve department locations
+            cursor.execute("SELECT Dlocation FROM dept_locations WHERE Dnumber = %s", (dept_number,))
+            locations = cursor.fetchall()
+            print("Locations       : ", end="")
+
+            if not locations:
+                print("None")
+            else:
+                loc_names = [loc[0] for loc in locations]
+                print(", ".join(loc_names))
+
+    except mysql.connector.Error as err:
+        print(f"MySQL Error: {err}")
+
 
 def remove_department(connection):
     # ask for Dnumber
