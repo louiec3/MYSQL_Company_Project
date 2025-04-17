@@ -397,13 +397,88 @@ def remove_dependent(connection):
     # show all dependents
     # ask for name of dependent to remove
     # remove dependent 
+
+    # ask for employee SSN
+    ssn = input("Enter the SSN of the employee: ").strip()
+                                                    
+    try:
+        connection.start_transaction()
+        with connection.cursor() as cursor:
+            # LOCK EMPLOYEE RECORD
+            cursor.execute("SELECT * FROM employees WHERE Ssn = %s FOR UPDATE", (ssn,))
+            employee = cursor.fetchone()
+            if not employee:
+                print("Employee not found.")
+                connection.rollback() # unlock
+                return
+
+            # show all dependents
+            cursor.execute("SELECT Dependent_name FROM dependent WHERE Essn = %s", (ssn,))
+            dependents = cursor.fetchall()
+            if not dependents:
+                print("This employee has no dependents.")
+                connection.rollback() # unlock
+                return
+
+            dep_names = [dep[0] for dep in dependents]
+            print("\nCurrent Dependents:")
+            print(", ".join(dep_names))
+
+            # ask for name of dependent to remove
+            name = input("Enter the name of the dependent to remove: ").strip()
+
+            if name not in dep_names:
+                print("No such dependent found for this employee.")
+                connection.rollback() # unlock
+                return
+
+            # remove dependent
+            cursor.execute("DELETE FROM dependent WHERE Essn = %s AND Dependent_name = %s", (ssn, name))
+            connection.commit()
+            print("Dependent removed successfully.")
+
+    except mysql.connector.Error as err:
+        print(f"MySQL Error: {err}")
+        connection.rollback() # unlock
+
     pass
 
 def add_department(connection):
     # ask for new department name and information
     # add new record
     # display error for constraint violations
-    pass
+    
+    dept_name = input("Enter new department name: ").strip()
+    dept_number = input("Enter new department number: ").strip()
+    manager_ssn = input("Enter manager SSN: ").strip()
+    manager_start_date = input("Enter manager start date (YYYY-MM-DD): ").strip()
+
+    try:
+        with connection.cursor() as cursor:
+            # check if department number already exists
+            cursor.execute("SELECT * FROM department WHERE Dnumber = %s", (dept_number,))
+            if cursor.fetchone():
+                print("A department with this number already exists.")
+                return
+
+            # check if manager SSN exists
+            cursor.execute("SELECT * FROM employees WHERE Ssn = %s", (manager_ssn,))
+            if not cursor.fetchone():
+                print("Manager SSN does not exist in the employees table.")
+                return
+
+            # add new record
+            cursor.execute("""
+                INSERT INTO department (Dname, Dnumber, Mgr_ssn, Mgr_start_date)
+                VALUES (%s, %s, %s, %s)
+            """, (dept_name, dept_number, manager_ssn, manager_start_date))
+
+            connection.commit()
+            print("Department added successfully.")
+
+    except mysql.connector.Error as err:
+        print("MySQL Error:", err)
+
 
 def view_department(connection):
     # ask for Dnumber
