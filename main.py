@@ -575,16 +575,55 @@ def remove_department(connection):
 
     except mysql.connector.Error as err:
         print(f"MySQL Error: {err}")
-        connection.rollback()# unlock
+        connection.rollback() # unlock
 
 
 def add_department_location(connection):
     # ask for Dnumber
-    # LOCK DEPARTMENT RECORD
-    # show all locations
-    # ask for new location
-    # create new location record
-    pass
+    dnumber = input("Enter the department number: ").strip()
+
+    try:
+        connection.start_transaction()
+        with connection.cursor() as cursor:
+            # LOCK DEPARTMENT RECORD
+            cursor.execute("SELECT * FROM department WHERE Dnumber = %s FOR UPDATE", (dnumber,))
+            dept = cursor.fetchone()
+            if not dept:
+                print("Department not found.")
+                connection.rollback()
+                return
+
+            # show all locations
+            cursor.execute("SELECT Dlocation FROM dept_locations WHERE Dnumber = %s", (dnumber,))
+            locations = cursor.fetchall()
+            print("\nCurrent Locations:")
+            if not locations:
+                print("None")
+            else:
+                location_names = [loc[0] for loc in locations]
+                print(", ".join(location_names))
+
+            # ask for new location
+            new_location = input("Enter new location to add: ").strip()
+
+            # check if location already exists
+            if new_location in location_names:
+                print("This location already exists for the department.")
+                connection.rollback()
+                return
+
+            # create new location record
+            cursor.execute("""
+                INSERT INTO dept_locations (Dnumber, Dlocation)
+                VALUES (%s, %s)
+            """, (dnumber, new_location))
+            connection.commit()
+            print("Location added successfully.")
+
+    except mysql.connector.Error as err:
+        print(f"MySQL Error: {err}")
+        connection.rollback()
+
 
 def remove_department_location(connection):
     # ask for Dnumber
