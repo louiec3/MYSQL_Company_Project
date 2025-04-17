@@ -1,10 +1,12 @@
+# Louis Cundari III
+# Project 2: Database
+
 import mysql.connector
 
 DATABASE_NAME = "Company"
 USER_NAME = "root"
 HOST_NAME = "localhost"
 PASSWORD = ""
-
 
 def connect_to_db():
     try:
@@ -324,7 +326,7 @@ def remove_employee(connection):
             except mysql.connector.Error as err:
                 print("Error occurred during deletion.")
                 print(f"Reason: {err}")
-                print("You may need to remove dependent records (e.g., dependents, works_on) first.")
+                print("You may to remove related records first (employees, department, dependents, works_on, etc...).")
                 connection.rollback() # unlock
 
     except mysql.connector.Error as err:
@@ -332,12 +334,6 @@ def remove_employee(connection):
         connection.rollback() # unlock
 
 def add_dependent(connection):
-    # ask for employee SSN
-    # LOCK EMPLOYEE RECORD
-    # show all dependents
-    # ask for new dependent info
-    # create ne wdependent record
-
     # ask for employee SSN
     ssn = input("Enter the SSN of the employee to add a dependent for: ").strip()
 
@@ -389,12 +385,6 @@ def add_dependent(connection):
 
 
 def remove_dependent(connection):
-    # ask for employee SSN
-    # LOCK EMPLOYEE RECORD
-    # show all dependents
-    # ask for name of dependent to remove
-    # remove dependent
-
     # ask for employee SSN
     ssn = input("Enter the SSN of the employee: ").strip()
                                                     
@@ -523,7 +513,7 @@ def view_department(connection):
 def remove_department(connection):
     # ask for Dnumber
     dnumber = input("Enter the department number to remove: ").strip()
-
+    
     try:
         connection.start_transaction()
         with connection.cursor() as cursor:
@@ -590,7 +580,7 @@ def add_department_location(connection):
             dept = cursor.fetchone()
             if not dept:
                 print("Department not found.")
-                connection.rollback()
+                connection.rollback() # unlock
                 return
 
             # show all locations
@@ -609,7 +599,7 @@ def add_department_location(connection):
             # check if location already exists
             if new_location in location_names:
                 print("This location already exists for the department.")
-                connection.rollback()
+                connection.rollback() # unlcok
                 return
 
             # create new location record
@@ -626,13 +616,59 @@ def add_department_location(connection):
 
 
 def remove_department_location(connection):
-    # ask for Dnumber
-    # LOCK DEPARTMENT RECORD
-    # show all loctions
-    # ask for location to remove
-    # confirm removal
-    # delete location record
-    pass 
+    # or Dnumber
+    dnumber = input("Enter the department number: ").strip()
+
+    try:
+        connection.start_transaction()
+        with connection.cursor() as cursor:
+            # LOCK DEPARTMENT RECORD
+            cursor.execute("SELECT * FROM department WHERE Dnumber = %s FOR UPDATE", (dnumber,))
+            dept = cursor.fetchone()
+            if not dept:
+                print("Department not found.")
+                connection.rollback()
+                return
+
+            # show all locations
+            cursor.execute("SELECT Dlocation FROM dept_locations WHERE Dnumber = %s", (dnumber,))
+            locations = cursor.fetchall()
+            location_names = [loc[0] for loc in locations]
+
+            print("\nCurrent Locations:")
+            if not location_names:
+                print("None")
+                connection.rollback()
+                return
+            else:
+                print(", ".join(location_names))
+
+            # ask for location to remove
+            location_to_remove = input("Enter the location to remove: ").strip()
+
+            if location_to_remove not in location_names:
+                print("Location not found for this department.")
+                connection.rollback()
+                return
+
+            # confirm removal
+            confirm = input(f"Are you sure you want to remove '{location_to_remove}'? (y/n): ").strip().lower()
+            if confirm != 'y':
+                print("Cancelled.")
+                connection.rollback()
+                return
+
+            # delete location record
+            cursor.execute("""
+                DELETE FROM dept_locations
+                WHERE Dnumber = %s AND Dlocation = %s
+            """, (dnumber, location_to_remove))
+            connection.commit()
+            print("Location removed successfully.")
+
+    except mysql.connector.Error as err:
+        print(f"MySQL Error: {err}")
+        connection.rollback()
 
 if __name__ == "__main__":
     main()
