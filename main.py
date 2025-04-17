@@ -310,7 +310,7 @@ def remove_employee(connection):
             print(f"Supervisor SSN : {row[8]}")
             print(f"Department No. : {row[9]}")
 
-            confirm = input("\nAre you sure you want to delete this employee? (y/n): ").strip().lower()
+            confirm = input("\nConfirm employee delete? (y/n): ").strip().lower()
             if confirm != 'y':
                 print("Cancelled.")
                 connection.rollback() # unlock
@@ -522,12 +522,61 @@ def view_department(connection):
 
 def remove_department(connection):
     # ask for Dnumber
-    # LOCK DEPARTMENT RECORD
-    # show department information
-    # ask for confirmation before delete
-    # deete deprtment
-    # print errors and ask them to remove dependencies
-    pass
+    dnumber = input("Enter the department number to remove: ").strip()
+
+    try:
+        connection.start_transaction()
+        with connection.cursor() as cursor:
+            # LOCK DEPARTMENT RECORD
+            cursor.execute("SELECT * FROM department WHERE Dnumber = %s FOR UPDATE", (dnumber,))
+            dept = cursor.fetchone()
+
+            if not dept:
+                print("Department not found.")
+                connection.rollback()
+                return
+
+            # show department information
+            cursor.execute("""
+                SELECT 
+                    d.Dname,
+                    d.Dnumber,
+                    e.Fname,
+                    e.Minit,
+                    e.Lname
+                FROM department d
+                LEFT JOIN employees e ON d.Mgr_ssn = e.Ssn
+                WHERE d.Dnumber = %s
+            """, (dnumber,))
+            row = cursor.fetchone()
+
+            print("\nDepartment Information:")
+            print(f"Department Name : {row[0]}")
+            print(f"Department No.  : {row[1]}")
+            print(f"Manager         : {row[2]} {row[3]} {row[4]}")
+
+            # ask for confirmation before delete
+            confirm = input("\nConfirm department delete? (y/n): ").strip().lower()
+            if confirm != 'y':
+                print("Cancelled.")
+                connection.rollback() # unlock
+                return
+
+            # delete department
+            try:
+                cursor.execute("DELETE FROM department WHERE Dnumber = %s", (dnumber,))
+                connection.commit()
+                print("Department successfully removed.")
+
+            except mysql.connector.Error as err:
+                print(f"Error: {err}")
+                print("You need to remove employees, projects, or location records first.")
+                connection.rollback() # unlock
+
+    except mysql.connector.Error as err:
+        print(f"MySQL Error: {err}")
+        connection.rollback()# unlock
+
 
 def add_department_location(connection):
     # ask for Dnumber
